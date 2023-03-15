@@ -1,7 +1,11 @@
 import { Text, FlatList } from "react-native";
 import tw from "twrnc";
+import { getAccount, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TokenAccountNotFoundError } from "@solana/spl-token"
 
 import { Screen } from "../components/Screen";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { useEffect, useMemo, useState } from "react";
+import { usePublicKeys, useSolanaConnection } from "../hooks/xnft-hooks";
 
 export function HomeScreen() {
   const features = [
@@ -15,6 +19,20 @@ export function HomeScreen() {
     "sign a transaction / message",
     "theme hook with light/dark support",
   ];
+
+  const connection = useSolanaConnection();
+  console.log(connection?.rpcEndpoint);
+
+  async function getTokenBalance(connection: Connection) {
+    const tokenAccountAddress = new PublicKey("3emsAVdmGKERbHjmGfQ6oZ1e35dkf5iYcS6U4CPKFVaa")
+    const tokenAccount = await getAccount(connection, tokenAccountAddress)
+    console.log({ balance: tokenAccount.amount })
+  }
+
+  useEffect(() => {
+    if (!connection) return
+    getTokenBalance(connection)
+  }, [connection]);
 
   return (
     <Screen>

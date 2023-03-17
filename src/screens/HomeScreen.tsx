@@ -1,49 +1,49 @@
-import { Text, FlatList } from "react-native";
-import tw from "twrnc";
-import { getAccount, getAssociatedTokenAddress, getAssociatedTokenAddressSync, TokenAccountNotFoundError } from "@solana/spl-token"
+import { Text } from "react-native";
+import { getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token"
 
 import { Screen } from "../components/Screen";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { useEffect, useMemo, useState } from "react";
 import { usePublicKeys, useSolanaConnection } from "../hooks/xnft-hooks";
+import SiteHeading from "../components/SiteHeading";
+import CouponBook from "../components/CouponBook";
 
 export function HomeScreen() {
-  const features = [
-    "tailwind",
-    "recoil",
-    "native styling",
-    "fetching code from an API",
-    "using a FlatList to render data",
-    "Image for both remote & local images",
-    "custom fonts",
-    "sign a transaction / message",
-    "theme hook with light/dark support",
-  ];
+  const backpackConnection = useSolanaConnection();
 
-  const connection = useSolanaConnection();
-  console.log(connection?.rpcEndpoint);
+  // Using the backpack connection doesn't work: https://github.com/coral-xyz/backpack/issues/3363
+  const connection = useMemo(() => {
+    if (!backpackConnection) return undefined
+    return new Connection(backpackConnection.rpcEndpoint, backpackConnection.commitment)
+  }, [backpackConnection])
 
-  async function getTokenBalance(connection: Connection) {
-    const tokenAccountAddress = new PublicKey("3emsAVdmGKERbHjmGfQ6oZ1e35dkf5iYcS6U4CPKFVaa")
+  const publicKeys = usePublicKeys()
+
+  const publicKey = useMemo(() => {
+    if (!publicKeys) return undefined
+    return new PublicKey(publicKeys['solana'])
+  }, [publicKeys])
+
+  const [balance, setBalance] = useState<number | undefined>(undefined)
+
+  async function getTokenBalance(connection: Connection, userPublicKey: PublicKey) {
+    // This is my coupon mint
+    const mint = new PublicKey("6ECroWv425bgRZWj1wnMuFLhvvYRBseykKPaK3LH5exc")
+    const tokenAccountAddress = getAssociatedTokenAddressSync(mint, userPublicKey)
     const tokenAccount = await getAccount(connection, tokenAccountAddress)
-    console.log({ balance: tokenAccount.amount })
+    setBalance(Number(tokenAccount.amount))
   }
 
   useEffect(() => {
-    if (!connection) return
-    getTokenBalance(connection)
+    if (!connection || !publicKey) return
+    getTokenBalance(connection, publicKey)
   }, [connection]);
 
   return (
     <Screen>
-      <Text style={tw`mb-4`}>
-        You'll find several examples of how to build xNFTs using react-native:
-      </Text>
-      <FlatList
-        data={features}
-        keyExtractor={(item) => item}
-        renderItem={({ item }) => <Text>- {item}</Text>}
-      />
+      <SiteHeading>Cookies Inc</SiteHeading>
+
+      {balance ? <CouponBook amount={balance} /> : <Text>Loading...</Text>}
     </Screen>
   );
 }
